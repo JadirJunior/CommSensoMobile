@@ -1,0 +1,49 @@
+import 'package:commsensomobile/core/services/session_service.dart';
+import 'package:commsensomobile/features/auth/data/auth_service.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+
+class LoginController extends GetxController {
+  LoginController(this._auth);
+
+  final AuthService _auth;
+
+  final userCtrl = TextEditingController();
+  final passCtrl = TextEditingController();
+  final formKey = GlobalKey<FormState>();
+
+  final isLoading = false.obs;
+  final error = RxnString();
+  final obscure = true.obs;
+
+  Future<void> onLogin() async {
+    if (!formKey.currentState!.validate()) return;
+
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      
+      await Future.delayed(const Duration(seconds: 2));
+
+      final session = Get.find<SessionService>();
+      await session.saveTokens(accessToken: 'fake_access_token', refreshToken: 'fake_refresh_token');
+      // await _auth.login(userCtrl.text.trim(), passCtrl.text);
+      Get.offAllNamed('/home'); //Navega se deu certo
+    } catch (e) {
+      error.value = 'Usuário ou senha incorretos';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  void toggleObscure() => obscure.value = !obscure.value;
+
+  @override
+  void onClose() {
+    userCtrl.dispose();
+    passCtrl.dispose();
+    super.onClose();
+  }
+}
