@@ -27,9 +27,10 @@ class LoginController extends GetxController {
       
       await Future.delayed(const Duration(seconds: 2));
 
-      final session = Get.find<SessionService>();
-      await session.saveTokens(accessToken: 'fake_access_token', refreshToken: 'fake_refresh_token');
-      // await _auth.login(userCtrl.text.trim(), passCtrl.text);
+      final tokens = await _auth.login(userCtrl.text.trim(), passCtrl.text);
+
+      await Get.find<SessionService>().saveTokens(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken);
+
       Get.offAllNamed('/home'); //Navega se deu certo
     } catch (e) {
       error.value = 'Usuário ou senha incorretos';

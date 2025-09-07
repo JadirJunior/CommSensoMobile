@@ -1,4 +1,5 @@
 import 'package:commsensomobile/core/routes/app_pages.dart';
+import 'package:commsensomobile/core/services/theme_controller.dart';
 import 'package:commsensomobile/core/theme/app_theme.dart';
 import 'package:commsensomobile/core/theme/tokens/app_colors.dart';
 import 'package:commsensomobile/features/auth/data/auth_service.dart';
@@ -13,12 +14,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
-      initialRoute: AppPages.initial,
-      getPages: AppPages.routes,
-    );
+    final theme = Get.find<ThemeController>();
+
+    return Obx(() => GetMaterialApp(
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: theme.themeMode.value,
+          initialRoute: AppPages.initial,
+          getPages: AppPages.routes,
+        ));
   }
 }
