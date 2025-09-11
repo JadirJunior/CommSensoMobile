@@ -1,4 +1,5 @@
 import 'package:commsensomobile/app/app.dart';
+import 'package:commsensomobile/app/presentation/navigation_controller.dart';
 import 'package:commsensomobile/core/http/api_config.dart';
 import 'package:commsensomobile/core/http/auth_http_client.dart';
 import 'package:commsensomobile/core/services/session_service.dart';
@@ -20,7 +21,7 @@ void main() async {
       permanent: true);
 
   final cfg = const ApiConfig(String.fromEnvironment('API_BASE_URL',
-      defaultValue: 'http://192.168.1.102:3000'));
+      defaultValue: 'http://192.168.1.100:3000'));
 
   Get.put<ApiConfig>(cfg, permanent: true);
 
@@ -44,6 +45,11 @@ void main() async {
 
   Get.lazyPut<DeviceController>(
         () => DeviceController(Get.find<DeviceService>()),
+    fenix: true, // recria se for coletado
+  );
+
+  Get.lazyPut<NavigationController>(
+        () => NavigationController(),
     fenix: true, // recria se for coletado
   );
 

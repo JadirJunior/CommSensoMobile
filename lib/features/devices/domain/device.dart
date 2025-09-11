@@ -1,11 +1,11 @@
-enum DeviceStatus { active, inactive, blocked, unknown }
+enum DeviceStatus { active, provisioned, blocked, unknown }
 
 DeviceStatus _statusFrom(String? s) {
   switch (s) {
     case 'active':
       return DeviceStatus.active;
-    case 'inactive':
-      return DeviceStatus.inactive;
+    case 'provisioned':
+      return DeviceStatus.provisioned;
     case 'blocked':
       return DeviceStatus.blocked;
     default:

@@ -1,4 +1,5 @@
 import 'package:commsensomobile/features/devices/presentation/widgets/device_filters.dart';
+import 'package:commsensomobile/features/devices/presentation/widgets/device_item.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:commsensomobile/features/devices/presentation/device_controller.dart';
@@ -41,32 +42,7 @@ class DevicesPageUi extends GetView<DeviceController> {
               itemBuilder: (context, i) {
                 final d = controller.devices[i];
                 final statusColor = _statusColor(d.status.name, cs);
-                return ListTile(
-                  leading: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      const CircleAvatar(child: Icon(Icons.memory)),
-                      Positioned(
-                        right: -2, bottom: -2,
-                        child: Container(
-                          width: 10, height: 10,
-                          decoration: BoxDecoration(
-                            color: statusColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: cs.surface, width: 2),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  title: Text(d.name),
-                  subtitle: Text(d.appName), // placeholder
-                  trailing: FilledButton.tonal(
-                    onPressed: () { /* mudar para aba Ao vivo com este device */ },
-                    child: const Text('Live'),
-                  ),
-                  onTap: () { /* abrir detalhe */ },
-                );
+                return DeviceItem(statusColor: statusColor, cs: cs, d: d, controller: controller);
               },
             ),
             // Loading de rodapé (para futuras paginações)
@@ -87,7 +63,7 @@ class DevicesPageUi extends GetView<DeviceController> {
 Color _statusColor(String status, ColorScheme cs) {
   switch (status.toLowerCase()) {
     case 'active': return cs.primary;
-    case 'inactive': return cs.error;
+    case 'blocked': return cs.error;
     default: return cs.outline;
   }
 }

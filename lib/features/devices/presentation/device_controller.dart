@@ -2,19 +2,22 @@ import 'package:commsensomobile/core/services/session_service.dart';
 import 'package:commsensomobile/features/auth/data/auth_service.dart';
 import 'package:commsensomobile/features/devices/data/device_service.dart';
 import 'package:commsensomobile/features/devices/domain/device.dart';
+import 'package:commsensomobile/features/live/presentation/live_page_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 class DeviceController extends GetxController {
   DeviceController(this._service);
+
   final DeviceService _service;
 
-  final devices = <Device>[].obs;     // lista exibida
-  final allDevices = <Device>[].obs;  // fonte (último fetch)
+  final devices = <Device>[].obs; // lista exibida
+  final allDevices = <Device>[].obs; // fonte (último fetch)
   final isLoading = false.obs;
   final error = RxnString();
   final chipSelected = 0.obs; // 0=all, 1=active, 2=inactive
+  final selectedDevice = Rxn<Device>();
 
   @override
   void onInit() {
@@ -43,7 +46,7 @@ class DeviceController extends GetxController {
 
     DeviceStatus statusFor(int i) {
       if (i % 5 == 0) return DeviceStatus.blocked;
-      if (i % 3 == 0) return DeviceStatus.inactive;
+      if (i % 3 == 0) return DeviceStatus.provisioned;
       return DeviceStatus.active;
     }
 
@@ -59,7 +62,6 @@ class DeviceController extends GetxController {
       );
     });
   }
-
 
   Future<void> refreshList() => fetch(); // para RefreshIndicator
 
@@ -80,7 +82,16 @@ class DeviceController extends GetxController {
         break;
       case 2: // Inativos
         devices.assignAll(
-          allDevices.where((d) => d.status == DeviceStatus.inactive).toList(),
+          allDevices
+              .where((d) => d.status == DeviceStatus.provisioned)
+              .toList(),
+        );
+        break;
+      case 3: // Bloqueados
+        devices.assignAll(
+          allDevices
+              .where((d) => d.status == DeviceStatus.blocked)
+              .toList(),
         );
         break;
       default:
@@ -88,5 +99,12 @@ class DeviceController extends GetxController {
     }
   }
 
+  void goLive(Device device) {
+    // Navigation to live view
+    Get.to(() => LivePageUi(device: device));
+  }
 
+  void selectDevice(Device device) {
+    selectedDevice.value = device;
+  }
 }
