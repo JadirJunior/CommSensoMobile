@@ -1,3 +1,4 @@
+import 'package:commsensomobile/core/services/mqtt/mqtt_client_service.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -29,6 +30,7 @@ class SessionService extends GetxService {
   Future<void> clear() async {
     await _storage.delete(key: 'access_token');
     await _storage.delete(key: 'refresh_token');
+    Get.find<MqttClientService>().onClose();
     _accessToken.value = null;
   }
 }

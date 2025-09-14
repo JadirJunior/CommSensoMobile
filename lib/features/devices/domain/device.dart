@@ -1,3 +1,5 @@
+import 'package:get/get.dart';
+
 enum DeviceStatus { active, provisioned, blocked, unknown }
 
 DeviceStatus _statusFrom(String? s) {
@@ -22,6 +24,8 @@ class Device {
   final String appName;
   final String tenantName;
   final DeviceStatus status;
+  Rx<bool> isMeasuring = false.obs;
+  Rx<bool> isOnline = false.obs;
 
 
   Device({
@@ -46,4 +50,6 @@ class Device {
       status: _statusFrom(j['status'] as String?),
     );
   }
+
+
 }

@@ -1,3 +1,6 @@
+import 'package:commsensomobile/core/config/build_env.dart';
+import 'package:commsensomobile/core/services/mqtt/mqtt_client_service.dart';
+import 'package:commsensomobile/core/services/mqtt/mqtt_config.dart';
 import 'package:commsensomobile/core/services/session_service.dart';
 import 'package:commsensomobile/features/auth/data/auth_service.dart';
 import 'package:flutter/material.dart';
@@ -24,12 +27,25 @@ class LoginController extends GetxController {
     error.value = null;
 
     try {
-      
       await Future.delayed(const Duration(seconds: 2));
 
       final tokens = await _auth.login(userCtrl.text.trim(), passCtrl.text);
 
-      await Get.find<SessionService>().saveTokens(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken);
+      await Get.find<SessionService>().saveTokens(
+          accessToken: tokens.accessToken, refreshToken: tokens.refreshToken);
+
+      final mqttService = Get.find<MqttClientService>();
+
+      final cfg = MqttConfig(
+          host: BuildEnv.brokerHost,
+          port: BuildEnv.brokerPort,
+          clientId: 'app_${DateTime.now().millisecondsSinceEpoch}',
+          username: BuildEnv.brokerUser,
+          password: tokens.accessToken,
+          secure: BuildEnv.brokerTls,
+          useWebSocket: BuildEnv.brokerWs);
+
+      await mqttService.init(cfg);
 
       Get.offAllNamed('/home'); //Navega se deu certo
     } catch (e) {

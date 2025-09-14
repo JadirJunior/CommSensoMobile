@@ -1,6 +1,7 @@
 import 'package:commsensomobile/features/devices/presentation/device_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:commsensomobile/features/devices/domain/device.dart';
+import 'package:get/get.dart';
 
 
 class DeviceItem extends StatelessWidget {
@@ -19,6 +20,9 @@ class DeviceItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    final bool isActive = d.status == DeviceStatus.active;
+
     return ListTile(
       leading: Stack(
         clipBehavior: Clip.none,
@@ -39,8 +43,18 @@ class DeviceItem extends StatelessWidget {
       ),
       title: Text(d.name),
       subtitle: Text(d.appName), // placeholder
-      trailing: FilledButton.tonal(
-        onPressed: () {},
+      trailing: isActive
+          ? FilledButton.tonal(
+        onPressed: () {
+          controller.goLive(d);
+        },
+        child: const Text('Live'),
+      )
+          : FilledButton.tonal(
+        onPressed: () {
+          Get.snackbar('Dispositivo inativo',
+              'O dispositivo não está ativo no momento.');
+        },
         child: const Text('Live'),
       ),
       onTap: () { /* abrir detalhe */ },

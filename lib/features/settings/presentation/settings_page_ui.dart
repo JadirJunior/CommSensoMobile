@@ -1,3 +1,4 @@
+import 'package:commsensomobile/core/services/mqtt/mqtt_client_service.dart';
 import 'package:commsensomobile/core/services/theme_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -20,6 +21,11 @@ class SettingsPageUi extends StatelessWidget {
         const ListTile(
           leading: Icon(Icons.account_circle),
           title: Text('Conta'),
+        ),
+        ListTile(
+          leading: const Icon(Icons.connect_without_contact_rounded),
+          title: const Text('Conectar ao servidor'),
+          onTap: () { _reconnectMqtt(); } ,
         ),
         const Divider(),
 
@@ -77,5 +83,9 @@ class SettingsPageUi extends StatelessWidget {
         );
       }),
     );
+  }
+
+  Future<void> _reconnectMqtt() async {
+    await Get.find<MqttClientService>().reconnect();
   }
 }

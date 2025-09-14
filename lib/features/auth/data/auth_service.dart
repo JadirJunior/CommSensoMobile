@@ -1,9 +1,14 @@
 import 'dart:convert';
 import 'dart:developer' as dev;
+import 'package:commsensomobile/core/config/build_env.dart';
+import 'package:commsensomobile/core/services/mqtt/mqtt_client_service.dart';
+import 'package:commsensomobile/core/services/mqtt/mqtt_config.dart';
 import 'package:commsensomobile/features/auth/domain/tokens.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mqtt_client/mqtt_server_client.dart';
+import 'package:get/get.dart';
 
 class AuthService {
   AuthService(this._baseUrl, this._storage);
@@ -12,7 +17,6 @@ class AuthService {
   final FlutterSecureStorage _storage;
 
   Future<Tokens> login(String user, String password) async {
-
     dev.log('Iniciando login para usuário: $user');
     final res = await http.post(Uri.parse('$_baseUrl/users/login'),
         headers: {'Content-Type': 'application/json'},
@@ -21,7 +25,6 @@ class AuthService {
     dev.log(res.body);
     if (res.statusCode == 200) {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-
 
       // dev.log('Login bem-sucedido: $body');
       final tokens = Tokens(
@@ -48,15 +51,22 @@ class AuthService {
     final res = await http.post(Uri.parse('$_baseUrl/auth/refresh}'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'refresh_token': refreshToken}));
+
     if (res.statusCode != 200) {
       throw Exception('Falha ao renovar token');
     }
 
     final body = jsonDecode(res.body) as Map<String, dynamic>;
 
+    await Get.find<MqttClientService>().reconfigure(MqttConfig(
+        host: BuildEnv.brokerHost,
+        port: BuildEnv.brokerPort,
+        clientId: 'app_${DateTime.now().millisecondsSinceEpoch}',
+        username: BuildEnv.brokerUser,
+        password: body['access_token'] as String));
+
     return Tokens(
         accessToken: body['access_token'] as String,
-        refreshToken: body['refresh_token'] as String
-    );
+        refreshToken: body['refresh_token'] as String);
   }
 }
