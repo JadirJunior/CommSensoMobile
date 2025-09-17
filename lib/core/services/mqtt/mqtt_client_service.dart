@@ -77,6 +77,7 @@ class MqttClientService extends GetxService {
         for (final e in events) {
           final msg = e.payload as MqttPublishMessage;
           final payload = MqttPublishPayload.bytesToStringAsString(msg.payload.message);
+          debugPrint('MQTT message received: ${e.topic} -> $payload');
           _stream.add(MqttAppMessage(e.topic, payload));
         }
       });
@@ -194,7 +195,7 @@ class MqttClientService extends GetxService {
 
   @override
   void onClose() {
-    _stream.close();
+    // _stream.close();
     _disconnect();
     super.onClose();
   }

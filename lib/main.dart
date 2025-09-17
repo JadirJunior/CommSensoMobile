@@ -11,7 +11,9 @@ import 'package:commsensomobile/features/auth/data/auth_service.dart';
 import 'package:commsensomobile/features/devices/data/device_service.dart';
 import 'package:commsensomobile/features/devices/presentation/device_controller.dart';
 import 'package:commsensomobile/features/live/data/live_service.dart';
+import 'package:commsensomobile/features/live/data/sensor_service.dart';
 import 'package:commsensomobile/features/live/presentation/live_controller.dart';
+import 'package:commsensomobile/features/live/presentation/measurement_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
@@ -55,6 +57,11 @@ void main() async {
     permanent: true,
   );
 
+  Get.put<SensorService>(
+    SensorService(interceptorHttp, cfg),
+    permanent: true,
+  );
+
   Get.lazyPut<DeviceController>(
     () => DeviceController(Get.find<DeviceService>()),
     fenix: true, // recria se for coletado
@@ -69,6 +76,12 @@ void main() async {
     () => LiveController(Get.find<LiveService>()),
     fenix: true,
   );
+
+   Get.lazyPut<MeasurementController>(() => MeasurementController(), fenix: true);
+
+  final measurementController = Get.find<MeasurementController>();
+
+  await measurementController.fetchSensors();
 
   await Get.putAsync<ThemeController>(
       () async => ThemeController(GetStorage()).init(),

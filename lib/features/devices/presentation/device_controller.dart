@@ -4,9 +4,13 @@ import 'package:commsensomobile/app/presentation/navigation_controller.dart';
 import 'package:commsensomobile/core/services/mqtt/mqtt_client_service.dart';
 import 'package:commsensomobile/features/devices/data/device_service.dart';
 import 'package:commsensomobile/features/devices/domain/device.dart';
+import 'package:commsensomobile/features/live/domain/container.dart';
 import 'package:commsensomobile/features/live/domain/measure.dart';
+import 'package:commsensomobile/features/live/presentation/live_controller.dart';
+import 'package:commsensomobile/features/live/presentation/measurement_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 
 class DeviceController extends GetxController {
   DeviceController(this._service);
@@ -20,8 +24,6 @@ class DeviceController extends GetxController {
   final chipSelected = 0.obs; // 0=all, 1=active, 2=inactive
   final selectedDevice = Rxn<Device>();
 
-  final RxMap<String, RxMap<String, Measurement>> deviceMeasurements = <String, RxMap<String, Measurement>>{}.obs;
-
   @override
   void onInit() {
     super.onInit();
@@ -30,10 +32,14 @@ class DeviceController extends GetxController {
     final mqtt = Get.find<MqttClientService>();
 
     mqtt.messages.listen((MqttAppMessage msg) {
+
+      debugPrint("MQTT Message Received: ${msg.topic} -> ${msg.payload}");
+
+      final measurementController = Get.find<MeasurementController>();
+      final liveController = Get.find<LiveController>();
+
       final device = selectedDevice.value;
       if (device == null) return;
-
-      debugPrint("MQTT Message: ${msg.topic} -> ${msg.payload}");
       if (msg.topic == '${device.tenantId}/${device.appId}/devices/${device.id}/state') {
         final isOnline = msg.payload == 'online';
         allDevices.firstWhere((d) => d.id == device.id).isOnline.value = isOnline;
@@ -44,11 +50,28 @@ class DeviceController extends GetxController {
 
         update();
       } else if (msg.topic == '${device.tenantId}/${device.appId}/devices/${device.id}/measure') {
-        device.isMeasuring.value = true;
 
         final data = jsonDecode(msg.payload);
 
-        updateDeviceMeasurements(device.id, data);
+        final container = liveController.containers.firstWhereOrNull((c) => c.id == data['containerId']);
+
+        if (container == null) {
+          debugPrint('Container with id ${data['containerId']} not found');
+          return;
+        }
+
+        if (device.currentContainerId?.value == 0) {
+          device.currentContainerId?.value = container!.id;
+        }
+
+        if (device.currentContainerId?.value != container.id) return;
+
+
+        device.isMeasuring.value = true;
+
+        allDevices.firstWhere((d) => d.id == device.id).isOnline.value = true;
+
+        measurementController.updateMeasurementsFromPayload(device.id, data);
         update();
       }
     });
@@ -72,28 +95,6 @@ class DeviceController extends GetxController {
     } finally {
       isLoading.value = false;
     }
-  }
-
-  Future<List<Device>> _fakeList() async {
-    await Future.delayed(const Duration(milliseconds: 600)); // simula rede
-
-    DeviceStatus statusFor(int i) {
-      if (i % 5 == 0) return DeviceStatus.blocked;
-      if (i % 3 == 0) return DeviceStatus.provisioned;
-      return DeviceStatus.active;
-    }
-
-    return List.generate(10, (i) {
-      return Device(
-        id: 'dev-${i + 1}',
-        name: 'Device ${i + 1}',
-        tenantId: 'ten-${(i % 3) + 1}',
-        tenantName: 'Tenant ${(i % 3) + 1}',
-        appId: 'app-${(i % 2) + 1}',
-        appName: 'App ${(i % 2) + 1}',
-        status: statusFor(i), // <-- enum, não string
-      );
-    });
   }
 
   Future<void> refreshList() => fetch(); // para RefreshIndicator
@@ -141,6 +142,9 @@ class DeviceController extends GetxController {
   void selectDevice(Device device) {
     final mqtt = Get.find<MqttClientService>();
 
+    final measurementController = Get.find<MeasurementController>();
+
+
     // Desinscreve tópicos antigos da conexão atual, mas NÃO fecha a conexão
     if (selectedDevice.value != null) {
       mqtt.unsubscribeAll(prefix: '${selectedDevice.value!.tenantId}/${selectedDevice.value!.appId}/devices');
@@ -148,12 +152,16 @@ class DeviceController extends GetxController {
 
     selectedDevice.value = device;
 
+    measurementController.fetchSensors();
     mqtt.subscribe('${device.tenantId}/${device.appId}/devices/${device.id}/state');
     mqtt.subscribe('${device.tenantId}/${device.appId}/devices/${device.id}/cmd/ack');
     mqtt.subscribe('${device.tenantId}/${device.appId}/devices/${device.id}/measure');
+
+
   }
 
-  void startMeasurement(String containerName, int interval) {
+  void startMeasurement(CContainer container, int interval) {
+    final measurementController = Get.find<MeasurementController>();
 
     if (selectedDevice.value == null) {
       Get.snackbar('Erro', 'Nenhum dispositivo selecionado');
@@ -170,9 +178,10 @@ class DeviceController extends GetxController {
       return;
     }
 
+
     final payload = jsonEncode({
       "action": "start",
-      "containerName": containerName,
+      "containerName": container.name,
       "interval": interval,
     });
 
@@ -180,6 +189,9 @@ class DeviceController extends GetxController {
 
     mqttClient.publish('${selectedDevice.value?.tenantId}/${selectedDevice.value?.appId}/devices/${selectedDevice.value?.id}/cmd/power', payload);
     selectedDevice.value!.isMeasuring.value = true;
+    selectedDevice.value!.currentContainerId?.value = container.id;
+    measurementController.deviceMeasurements[selectedDevice.value!.id]?.clear();
+
   }
 
   void stopMeasurement() {
@@ -201,19 +213,6 @@ class DeviceController extends GetxController {
 
     mqttClient.publish('${selectedDevice.value?.tenantId}/${selectedDevice.value?.appId}/devices/${selectedDevice.value?.id}/cmd/power', payload);
     selectedDevice.value?.isMeasuring.value = false;
-  }
-
-  void updateDeviceMeasurements(String deviceId, Map<String, dynamic> json) {
-    final measurements = deviceMeasurements.putIfAbsent(deviceId, () => <String, Measurement>{}.obs);
-
-    measurements['temperature'] = Measurement(name: 'Temperatura', value: json['value'], unit: '°C', sensorId: json['sensorId'], containerId: json['containerId']);
-    measurements['humidity'] = Measurement(name: 'Umidade', value: json['value'], unit: '%', sensorId: json['sensorId'], containerId: json['containerId']);
-    measurements['ph'] = Measurement(name: 'pH', value: json['value'], unit: '', sensorId: json['sensorId'], containerId: json['containerId']);
-    measurements['ec'] = Measurement(name: 'Condutividade Elétrica', value: json['value'], unit: 'µS/cm', sensorId: json['sensorId'], containerId: json['containerId']);
-    measurements['nitrogen'] = Measurement(name: 'Nitrogênio', value: json['value'], unit: 'mg/kg', sensorId: json['sensorId'], containerId: json['containerId']);
-    measurements['phosphorus'] = Measurement(name: 'Fósforo', value: json['value'], unit: 'mg/kg', sensorId: json['sensorId'], containerId: json['containerId']);
-    measurements['potassium'] = Measurement(name: 'Potássio', value: json['value'], unit: 'mg/kg', sensorId: json['sensorId'], containerId: json['containerId']);
-
-    measurements.refresh();
+    selectedDevice.value?.currentContainerId?.value = 0;
   }
 }

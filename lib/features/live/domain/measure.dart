@@ -1,15 +1,22 @@
 class Measurement {
-  final String name;
   final double value;
   final int sensorId;
   final int containerId;
-  final String unit;
+  final DateTime timestamp;
 
   Measurement({
-    required this.name,
+    required this.timestamp,
     required this.value,
     required this.sensorId,
     required this.containerId,
-    required this.unit,
   });
+
+  factory Measurement.fromJson(Map<String, dynamic> json) {
+    return Measurement(
+      timestamp: DateTime.parse(json['timestamp']),
+      value: (json['value'] as num).toDouble(),
+      sensorId: json['sensorId'],
+      containerId: json['containerId'],
+    );
+  }
 }

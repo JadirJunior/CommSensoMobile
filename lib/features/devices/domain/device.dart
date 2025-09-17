@@ -24,6 +24,9 @@ class Device {
   final String appName;
   final String tenantName;
   final DeviceStatus status;
+
+
+  RxInt? currentContainerId = 0.obs;
   Rx<bool> isMeasuring = false.obs;
   Rx<bool> isOnline = false.obs;
 

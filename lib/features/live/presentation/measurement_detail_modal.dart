@@ -27,7 +27,7 @@ class _MeasurementControlModalState extends State<MeasurementControlModal> {
       return;
     }
 
-    deviceController.startMeasurement(liveController.selectedContainer.value!.name,
+    deviceController.startMeasurement(liveController.selectedContainer.value!,
         liveController.measurementInterval.value);
     Navigator.pop(context);
   }
